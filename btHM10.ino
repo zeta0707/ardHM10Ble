@@ -18,24 +18,33 @@ For more details about the product please check http://www.seeedstudio.com/depot
 
 /* Upload this sketch into Arduino Uno and press reset*/
 
-#include <SoftwareSerial.h>   //Software Serial Port
-#define RxD 2
-#define TxD 3
-int BOARD_LED = 13 ;              // define LED Interface
+#define __MEGA2560__ 1					//0: Uno, 1: Mega 2560
+#define MASTER 0    					//change this macro to define the Bluetooth as Master or not 
+#define ATCOMMAND_NAME_AUTH	1			//change module authentication and name
+#define NLCR 1                          //module type requires NL and CR
+#define BAUDRATE 9600
 
-#define MASTER 0    //change this macro to define the Bluetooth as Master or not 
+#if __MEGA2560__
+	#define RxD 15
+	#define TxD 14	
+	#define blueToothSerial Serial3		//the software serial port
+#else
+	#include <SoftwareSerial.h>   		//Software Serial Port
+	#define RxD 2
+	#define TxD 3
+	SoftwareSerial blueToothSerial(RxD,TxD);	//the software serial port 
+#endif
 
-SoftwareSerial blueToothSerial(RxD,TxD);//the software serial port 
+int BOARD_LED = 13 ;              		// define LED Interface
 
 char recv_str[100];
 
 void setup() 
 {
-    Serial.begin(9600);   //Serial port for debugging
-    pinMode(RxD, INPUT);    //UART pin for Bluetooth
-    pinMode(TxD, OUTPUT);   //UART pin for Bluetooth
+    Serial.begin(BAUDRATE);   				//Serial port for debugging
+    blueToothSerial.begin(BAUDRATE);            //BT module baud rate
     Serial.println("\r\nPower on!!");
-    setupBlueToothConnection(); //initialize Bluetooth
+    setupBlueToothConnection(); 		//initialize Bluetooth
     //this block is waiting for connection was established.
     while(1)
     {
@@ -75,7 +84,7 @@ void loop()
         Serial.print((char *)recv_str);
         Serial.println("");
         Serial.println("send: ACK");
-        blueToothSerial.print("ACK");//return back message
+        blueToothSerial.print("ACK");	//return back message
     }
     #endif
 }
@@ -103,7 +112,6 @@ int setupBlueToothConnection()
 
     Serial.print("Setting up Bluetooth link\r\n");
     delay(2000);//wait for module restart
-    blueToothSerial.begin(9600);
 
     //wait until Bluetooth was found
     while(1)
@@ -120,20 +128,26 @@ int setupBlueToothConnection()
     }
 
     //configure the Bluetooth
-    sendBlueToothCommand("AT+DEFAULT");//restore factory configurations
+    sendBlueToothCommand("AT+DEFAULT");			//restore factory configurations, what parameters?
     delay(2000);
-    //sendBlueToothCommand("AT+AUTH1");//enable authentication
-    //sendBlueToothCommand("AT+PASS123456");//set password
-    //sendBlueToothCommand("AT+NOTI1");//set password
+
     //set role according to the macro
     sendBlueToothCommand("AT+NAME?");
-    //sendBlueToothCommand("AT+NAMEZETAHM-10");
+
     #if MASTER
-    sendBlueToothCommand("AT+ROLEM");//set to master mode
+    sendBlueToothCommand("AT+ROLEM");			//set to master mode
     #else
-    sendBlueToothCommand("AT+ROLES");//set to slave mode
+    sendBlueToothCommand("AT+ROLES");			//set to slave mode
     #endif
-    sendBlueToothCommand("AT+RESTART");//restart module to take effect
+    sendBlueToothCommand("AT+RESTART");			//restart module to take effect
+
+	#if ATCOMMAND_NAME_AUTH
+    sendBlueToothCommand("AT+AUTH1");			//enable authentication
+    sendBlueToothCommand("AT+PASS123456");		//set password
+    sendBlueToothCommand("AT+NOTI1");			//set password	
+	sendBlueToothCommand("AT+NAMEZETAHM-10");
+	#endif
+	
     delay(2000);//wait for module restart
 
     //check if the Bluetooth always exists
@@ -155,8 +169,11 @@ int sendBlueToothCommand(char command[])
     Serial.print("send: ");
     Serial.print(command);
     Serial.println("");
-
+#if NLCR
+    blueToothSerial.println(command);
+#else
     blueToothSerial.print(command);
+#endif    
     delay(300);
 
     if(recvMsg(200) != 0) return -1;
@@ -196,7 +213,10 @@ int recvMsg(unsigned int timeout)
         recv_str[i] = char(blueToothSerial.read());
         i++;
     }
+#if NLCR    
+    recv_str[i-2] = '\0';       //discard two character \n\r
+#else
     recv_str[i] = '\0';
-
+#endif
     return 0;
 }
