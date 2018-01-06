@@ -20,8 +20,8 @@ For more details about the product please check http://www.seeedstudio.com/depot
 
 #define __MEGA2560__ 1					//0: Uno, 1: Mega 2560
 #define MASTER 0    					//change this macro to define the Bluetooth as Master or not 
-#define ATCOMMAND_NAME_AUTH	1			//change module authentication and name
-#define NLCR 1                          //module type requires NL and CR
+#define ATCOMMAND_NAME_AUTH	0			//change module authentication and name
+#define NLCR 0                          //module type requires NL and CR
 #define BAUDRATE 9600
 
 #if __MEGA2560__
@@ -41,8 +41,8 @@ char recv_str[100];
 
 void setup() 
 {
-    Serial.begin(BAUDRATE);   				//Serial port for debugging
-    blueToothSerial.begin(BAUDRATE);            //BT module baud rate
+    Serial.begin(BAUDRATE);   			//Serial port for debugging
+    blueToothSerial.begin(BAUDRATE);    //BT module baud rate
     Serial.println("\r\nPower on!!");
     setupBlueToothConnection(); 		//initialize Bluetooth
     //this block is waiting for connection was established.
